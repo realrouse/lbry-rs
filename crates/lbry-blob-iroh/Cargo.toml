@@ -1,0 +1,18 @@
+[package]
+name = "lbry-blob-iroh"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Iroh transport for LBRY blob Have/Get/Put over QUIC (ALPN lbry-blob-iroh/1)"
+publish = false
+
+[dependencies]
+anyhow = { workspace = true }
+base64 = { workspace = true }
+iroh = { workspace = true }
+lbry-blob = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

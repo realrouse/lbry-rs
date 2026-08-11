@@ -1,0 +1,7 @@
+{
+  "content_blobs": 2,
+  "filename": "source_demo.wav",
+  "note": "Demo pack for browser-superpeer experiment. Blobs are LBRY-shaped (SHA-384 + AES-256-CBC).",
+  "sd_hash": "4c1766f205e7dc6d6cd6064c0fc89c070be615273cafc861f60f0bd23c73c5628f69ca21150e81ce3e3907e764b253a9",
+  "stream_key": "58ebdcdbb71bdc7734832d6f94e87262befd23d502f678aa16bdc242b85049a6"
+}

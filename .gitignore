@@ -1,0 +1,5 @@
+/target/
+**/cache/
+*.log
+.env
+.DS_Store

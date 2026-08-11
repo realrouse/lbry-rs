@@ -1,0 +1,19 @@
+[package]
+name = "lbry-blob"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "LBRY-shaped stream descriptors, SHA-384 blob hashes, AES-256-CBC encrypt/decrypt"
+publish = false
+
+[dependencies]
+aes = { workspace = true }
+anyhow = { workspace = true }
+cbc = { workspace = true }
+cipher = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }

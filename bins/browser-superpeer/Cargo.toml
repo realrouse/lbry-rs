@@ -1,0 +1,27 @@
+[package]
+name = "browser-superpeer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "LBRY download/upload superpeer + localhost companion (Iroh)"
+publish = false
+
+[[bin]]
+name = "browser-superpeer"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+axum = { workspace = true }
+clap = { workspace = true }
+hex = { workspace = true }
+iroh = { workspace = true }
+lbry-blob = { workspace = true }
+lbry-blob-iroh = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

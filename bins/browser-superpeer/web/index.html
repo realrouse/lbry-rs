@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>lbry-rs — superpeer companion</title>
+  <style>
+    :root {
+      --bg: #0f1419; --card: #1a2332; --text: #e7ecf3; --muted: #9aa8bc;
+      --accent: #3d9cf0; --ok: #3ecf8e; --err: #f07178;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    main { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+    h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+    .sub { color: var(--muted); margin-bottom: 1.25rem; font-size: 0.95rem; }
+    .card { background: var(--card); border: 1px solid #2a3548; border-radius: 12px; padding: 1.2rem 1.3rem; margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.7rem 0 0.3rem; }
+    input, textarea { width: 100%; background: #0d121a; border: 1px solid #334155; border-radius: 8px; color: var(--text); padding: 0.55rem 0.7rem; font: inherit; }
+    textarea { min-height: 4.5rem; font-family: ui-monospace, monospace; font-size: 0.8rem; }
+    button { margin-top: 0.9rem; background: var(--accent); color: #041018; border: none; border-radius: 8px; padding: 0.6rem 1rem; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    .status { margin-top: 0.9rem; white-space: pre-wrap; font-size: 0.9rem; }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--err); }
+    video, audio { width: 100%; margin-top: 0.9rem; border-radius: 8px; background: #000; }
+    code { font-size: 0.85em; color: #c5d4e8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>lbry-rs companion</h1>
+    <p class="sub">
+      Browser UI over a native Iroh companion. Superpeer is a <strong>download + upload</strong> peer
+      (hash-verified PutBlob). No chain required.
+    </p>
+
+    <div class="card">
+      <h2>Play (download)</h2>
+      <label for="ticket">Superpeer ticket</label>
+      <textarea id="ticket" placeholder="ticket from: browser-superpeer superpeer"></textarea>
+      <label for="sd">sd_hash</label>
+      <input id="sd" type="text" autocomplete="off" />
+      <label for="key">Stream key (optional for demo packs)</label>
+      <input id="key" type="text" autocomplete="off" />
+      <button id="play" type="button">Fetch, verify, play</button>
+      <div id="playStatus" class="status"></div>
+      <div id="player"></div>
+    </div>
+
+    <div class="card">
+      <h2>Upload (peer → superpeer)</h2>
+      <p class="sub" style="margin-top:0">
+        Packs your file into LBRY-shaped blobs locally, then <code>PutBlob</code> each over Iroh.
+        After upload, anyone with the superpeer ticket can play using the returned <code>sd_hash</code>.
+      </p>
+      <label for="uticket">Superpeer ticket</label>
+      <textarea id="uticket" placeholder="same ticket as superpeer"></textarea>
+      <label for="file">File</label>
+      <input id="file" type="file" />
+      <button id="upload" type="button">Pack &amp; upload</button>
+      <div id="uploadStatus" class="status"></div>
+    </div>
+  </main>
+  <script>
+    function setStatus(el, text, cls) {
+      el.textContent = text;
+      el.className = "status" + (cls ? " " + cls : "");
+    }
+
+    document.getElementById("play").onclick = async () => {
+      const ticket = document.getElementById("ticket").value.trim();
+      const sd_hash = document.getElementById("sd").value.trim();
+      const key = document.getElementById("key").value.trim();
+      const status = document.getElementById("playStatus");
+      const player = document.getElementById("player");
+      const btn = document.getElementById("play");
+      if (!ticket || !sd_hash) { setStatus(status, "Ticket and sd_hash required.", "err"); return; }
+      btn.disabled = true; player.innerHTML = "";
+      setStatus(status, "Connecting… verifying LBRY hashes…");
+      try {
+        const res = await fetch("/api/play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticket, sd_hash, key: key || null }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || JSON.stringify(data));
+        setStatus(status, data.message + "\n" + data.filename + " (" + data.bytes + " bytes)\n" + data.media_path, "ok");
+        const lower = (data.filename || "").toLowerCase();
+        if (/\.(mp4|webm)$/.test(lower)) player.innerHTML = "<video controls src=\"" + data.media_path + "\"></video>";
+        else if (/\.(wav|mp3|ogg)$/.test(lower)) player.innerHTML = "<audio controls src=\"" + data.media_path + "\"></audio>";
+        else player.innerHTML = "<p><a href=\"" + data.media_path + "\" download>Download</a></p>";
+      } catch (e) {
+        setStatus(status, String(e.message || e), "err");
+      } finally { btn.disabled = false; }
+    };
+
+    document.getElementById("upload").onclick = async () => {
+      const ticket = document.getElementById("uticket").value.trim();
+      const fileInput = document.getElementById("file");
+      const status = document.getElementById("uploadStatus");
+      const btn = document.getElementById("upload");
+      if (!ticket) { setStatus(status, "Ticket required.", "err"); return; }
+      if (!fileInput.files || !fileInput.files[0]) { setStatus(status, "Choose a file.", "err"); return; }
+      btn.disabled = true;
+      setStatus(status, "Packing + uploading over Iroh (may take a bit)…");
+      try {
+        const fd = new FormData();
+        fd.append("ticket", ticket);
+        fd.append("file", fileInput.files[0]);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || JSON.stringify(data));
+        setStatus(status, data.message, "ok");
+        if (data.sd_hash) {
+          document.getElementById("sd").value = data.sd_hash;
+          document.getElementById("ticket").value = ticket;
+          document.getElementById("uticket").value = ticket;
+        }
+      } catch (e) {
+        setStatus(status, String(e.message || e), "err");
+      } finally { btn.disabled = false; }
+    };
+  </script>
+</body>
+</html>
